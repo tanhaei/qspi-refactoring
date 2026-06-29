@@ -1,0 +1,6 @@
+# Runtime dependencies for figure generation.
+matplotlib>=3.5
+numpy>=1.21
+
+# Development / testing.
+pytest>=7.0

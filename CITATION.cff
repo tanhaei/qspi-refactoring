@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated paper."
+title: "Q-SPI–Guided Human-in-the-Loop Architecture-Smell Refactoring"
+authors:
+  - family-names: "Tanhaei"
+    given-names: "Mohammad"
+    affiliation: "Department of Engineering, Ilam University"
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/USER/qspi-refactoring"
+url: "https://bioarc.ir"
+keywords:
+  - technical debt
+  - architecture smells
+  - Q-SPI
+  - refactoring
+  - health information systems
+  - design science
+preferred-citation:
+  type: article
+  title: "Human-in-the-Loop Architecture-Smell Refactoring for Safety-Sensitive Health Information Systems: A Q-SPI-Guided Design-Science Framework"
+  authors:
+    - family-names: "Tanhaei"
+      given-names: "Mohammad"
+  journal: "Journal of Systems and Software"
+  year: 2026

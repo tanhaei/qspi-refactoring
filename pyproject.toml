@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qspi-refactoring"
+version = "1.0.0"
+description = "Reference implementation of the Q-SPI metric and candidate-level utility score for human-in-the-loop architecture-smell refactoring."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Mohammad Tanhaei"}]
+keywords = ["technical-debt", "architecture-smells", "Q-SPI", "refactoring", "health-information-systems", "design-science"]
+dependencies = ["matplotlib>=3.5", "numpy>=1.21"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://bioarc.ir"
+
+[tool.setuptools]
+packages = ["qspi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
