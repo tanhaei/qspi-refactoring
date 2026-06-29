@@ -7,7 +7,7 @@ authors:
     affiliation: "Department of Engineering, Ilam University"
 version: 1.0.0
 license: MIT
-repository-code: "https://github.com/USER/qspi-refactoring"
+repository-code: "https://github.com/tanhaei/qspi-refactoring"
 url: "https://bioarc.ir"
 keywords:
   - technical debt
