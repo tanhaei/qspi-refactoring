@@ -4,7 +4,8 @@ reproduce_tables.py - Regenerate Tables 7 and 8 of the paper.
 
 Recomputes every derived quantity (SPI, rho, Q-SPI, utility) directly from
 the published formulas and inputs, prints them as readable tables, and
-writes machine-readable CSVs to outputs/.
+writes machine-readable CSVs to outputs/. The explanatory/action columns
+are carried through as well, so the CSVs reproduce the complete paper rows.
 
 Run:
     python scripts/reproduce_tables.py
@@ -30,7 +31,8 @@ from qspi.paper_data import (
     OMEGA_R,
 )
 
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_DIR = os.environ.get("QSPI_OUTPUT_DIR", os.path.join(REPO_ROOT, "outputs"))
 
 
 def reproduce_qspi_table():
@@ -38,7 +40,10 @@ def reproduce_qspi_table():
     print("Table 7  -  Worked Q-SPI illustration")
     print(f"(beta={BETA}, lambda={LAMBDA}, epsilon={EPSILON})")
     print("=" * 78)
-    header = f"{'Scenario':30} {'PV':>5} {'EV':>5} {'TD_new':>7} {'SPI':>6} {'rho':>8} {'Q-SPI':>7}"
+    header = (
+        f"{'Scenario':30} {'PV':>5} {'EV':>5} {'TD_new':>7} "
+        f"{'SPI':>6} {'rho':>8} {'Q-SPI':>7}  Interpretation"
+    )
     print(header)
     print("-" * 78)
 
@@ -47,16 +52,19 @@ def reproduce_qspi_table():
         s = it.spi()
         rho = it.debt_density(BETA, EPSILON)
         q = it.qspi(BETA, LAMBDA, EPSILON)
-        print(f"{it.name:30} {it.pv:5.0f} {it.ev_raw:5.0f} {it.td_new:7.0f} "
-              f"{s:6.2f} {rho:8.4f} {q:7.2f}")
+        print(
+            f"{it.name:30} {it.pv:5.0f} {it.ev_raw:5.0f} {it.td_new:7.0f} "
+            f"{s:6.2f} {rho:8.4f} {q:7.2f}  {it.interpretation}"
+        )
         rows.append({
             "scenario": it.name, "PV": it.pv, "EV_raw": it.ev_raw,
             "TD_new": it.td_new, "SPI": round(s, 4),
             "rho": round(rho, 6), "Q_SPI": round(q, 4),
+            "interpretation": it.interpretation,
         })
 
     path = os.path.join(OUT_DIR, "table7_qspi.csv")
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
@@ -90,7 +98,7 @@ def reproduce_priority_table():
         })
 
     path = os.path.join(OUT_DIR, "table8_priority.csv")
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)

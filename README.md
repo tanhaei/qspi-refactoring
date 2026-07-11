@@ -7,11 +7,13 @@ Reference implementation and reproducibility package for the paper:
 
 This repository turns the paper's equations into runnable, tested Python and
 regenerates the worked illustrations (Tables 7–8 and Figures 5–6) directly
-from the published formulas and parameters. Every numerical input is
-**abstracted from the [BioArc](https://bioarc.ir) operational system for
-confidentiality**; the computations themselves are exact and reproducible.
+from the published formulas and parameters. Iteration and candidate values
+are **abstracted from the [BioArc](https://bioarc.ir) operational system for
+confidentiality**. The Q-SPI parameters and governance weights are declared
+illustrative scenario settings, not calibrated BioArc measurements; the
+computations applied to all of these inputs are exact and reproducible.
 
-[![CI](https://github.com/USER/qspi-refactoring/actions/workflows/ci.yml/badge.svg)](https://github.com/USER/qspi-refactoring/actions)
+[![CI](https://github.com/tanhaei/qspi-refactoring/actions/workflows/ci.yml/badge.svg)](https://github.com/tanhaei/qspi-refactoring/actions)
 
 ---
 
@@ -89,16 +91,16 @@ organization's own audited cost estimates — never invented rates.
 qspi-refactoring/
 ├── qspi/                     # the library
 │   ├── core.py               # Equations (1)–(8), exact implementation
-│   ├── model.py              # Candidate, Iteration, rank_candidates (Alg. 1)
+│   ├── model.py              # Candidate, Iteration, numeric ranking step
 │   └── paper_data.py         # Tables 7–8 inputs, abstracted from BioArc
 ├── scripts/
 │   ├── reproduce_tables.py   # regenerates Tables 7 and 8 -> outputs/*.csv
-│   └── reproduce_figures.py  # regenerates Figures 5 and 6 -> figures/*.png
+│   └── reproduce_figures.py  # regenerates Figures 5 and 6 -> PNG + PDF
 ├── tests/
 │   ├── test_core.py          # equation checks + property + edge-case tests
 │   └── test_smoke.py         # end-to-end smoke test
 ├── outputs/                  # generated CSVs (Tables 7–8)
-├── figures/                  # generated PNGs (Figures 5–6)
+├── figures/                  # generated preview PNGs + manuscript PDFs
 ├── requirements.txt
 ├── pyproject.toml
 └── .github/workflows/ci.yml  # runs tests on Python 3.9–3.12
@@ -109,14 +111,14 @@ qspi-refactoring/
 ## Quick start
 
 ```bash
-git clone https://github.com/USER/qspi-refactoring.git
+git clone https://github.com/tanhaei/qspi-refactoring.git
 cd qspi-refactoring
 python -m pip install -r requirements.txt
 
 # Reproduce the paper's tables (prints them and writes CSVs to outputs/)
 python scripts/reproduce_tables.py
 
-# Reproduce the paper's figures (writes PNGs to figures/)
+# Reproduce the paper's figures (writes preview PNGs and vector PDFs)
 python scripts/reproduce_figures.py
 
 # Run the full test suite
@@ -170,8 +172,13 @@ and **Table 8** (candidate prioritization, `omega_E=0.60`, `omega_R=0.40`):
 > rounds to `0.039`. The code computes the correct value; this is a minor
 > display-rounding artifact worth fixing in the manuscript.
 
-Figures 5 (`figures/fig5_qspi_sensitivity.png`) and 6
-(`figures/fig6_decision_map.png`) are regenerated the same way.
+Figures 5 and 6 are regenerated as preview PNGs
+(`figures/fig5_qspi_sensitivity.png`, `figures/fig6_decision_map.png`) and as
+the vector files referenced by the manuscript
+(`figures/qspi_sensitivity.pdf`, `figures/priority_decision_map.pdf`). The
+decision map uses the fixed scenario boundaries shown in the paper
+(`E_ref + R_chg = 1.00` and `Delta_QSPI = 0.085`); it does not silently move
+the regions when candidate rows change.
 
 ---
 
@@ -180,14 +187,16 @@ Figures 5 (`figures/fig5_qspi_sensitivity.png`) and 6
 The suite (`pytest -v`) covers three things:
 
 - **Paper reproduction** — every Q-SPI and utility value is recomputed from
-  the formulas and checked against the published tables, including the
-  reported ranking order.
+  the formulas and checked against the published inputs and ranking order.
+  The manuscript's `0.040`/equation-derived `0.039` display discrepancy is
+  asserted explicitly so it cannot be hidden by a parameter change.
 - **Mathematical properties** — Q-SPI is bounded above by SPI, strictly
   decreasing in debt density, and collapses to SPI when there is no new
   debt; the quality factor stays in `(0, 1]`.
-- **Input validation** — non-positive `PV`, non-positive `epsilon`/`lambda`,
-  and weights that do not sum to 1 are rejected rather than silently
-  mishandled.
+- **Input validation** — non-finite values, invalid zero-delivery Q-SPI
+  cases, negative debt, non-positive calibration constants, normalized
+  inputs outside `[0, 1]`, and weights that do not sum to 1 are rejected
+  rather than silently mishandled.
 
 A separate end-to-end **smoke test** runs both reproduction scripts as a
 user would and verifies the generated CSVs and PNGs. CI runs everything on
@@ -205,7 +214,7 @@ severity, a non-LLM heuristic, LLM-without-Q-SPI, LLM-without-the-gate,
 full framework); use matched candidates as the unit of analysis; and report
 effect sizes, confidence intervals, and a sensitivity analysis for the
 Q-SPI parameters — alongside negative results. This repository provides the
-exact, audited computation such a study would build on; it does not stand in
+exact, tested computation such a study would build on; it does not stand in
 for the study itself.
 
 ---

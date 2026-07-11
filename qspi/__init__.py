@@ -8,9 +8,10 @@ utility score from:
 
 This package implements Equations (1)-(8) of the paper and reproduces the
 worked illustrations (Tables 7-8 and the sensitivity / decision-map
-figures). All numerical inputs are abstracted from the BioArc operational
-system for confidentiality; the computations themselves are exact and
-reproducible from the published formulas.
+figures). Iteration and candidate inputs are abstracted from the BioArc
+operational system for confidentiality; Q-SPI parameters and governance
+weights are illustrative scenario settings. The computations themselves are
+exact and reproducible from the published formulas.
 """
 
 from .core import (

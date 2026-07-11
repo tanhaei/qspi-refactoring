@@ -19,6 +19,23 @@ from typing import Sequence
 DEFAULT_EPSILON: float = 1e-3
 
 
+def _require_finite(name: str, value: float) -> None:
+    """Reject NaN and infinities before they can contaminate a score."""
+    try:
+        finite = math.isfinite(value)
+    except TypeError as exc:
+        raise ValueError(f"{name} must be a finite real number.") from exc
+    if not finite:
+        raise ValueError(f"{name} must be a finite real number.")
+
+
+def _require_unit_interval(name: str, value: float) -> None:
+    """Validate a normalized candidate-level input."""
+    _require_finite(name, value)
+    if not 0.0 <= value <= 1.0:
+        raise ValueError(f"{name} must be in [0, 1].")
+
+
 def spi(ev_raw: float, pv: float) -> float:
     """Conventional schedule performance index, Equation (1).
 
@@ -31,12 +48,17 @@ def spi(ev_raw: float, pv: float) -> float:
 
     Raises
     ------
-    ValueError if pv <= 0. The paper notes that iterations with PV = 0
-    (or EV_raw = 0) must be handled separately rather than interpreted
-    through an inflated ratio.
+    ValueError if pv <= 0 or EV_raw < 0. Equation (1) itself permits
+    EV_raw = 0; the debt-density and Q-SPI functions reject that case in
+    accordance with the manuscript's instruction to handle zero-delivery
+    iterations separately.
     """
+    _require_finite("EV_raw", ev_raw)
+    _require_finite("PV", pv)
     if pv <= 0:
         raise ValueError("PV must be > 0 to compute SPI (Eq. 1).")
+    if ev_raw < 0:
+        raise ValueError("EV_raw must be >= 0 to compute SPI (Eq. 1).")
     return ev_raw / pv
 
 
@@ -62,17 +84,29 @@ def debt_density(
     Notes
     -----
     The paper states that iterations with EV_raw = 0 should be handled
-    separately. We do not silently divide; if beta*EV_raw + epsilon would
-    be non-positive we raise.
+    separately. This implementation therefore rejects EV_raw <= 0 instead
+    of allowing epsilon to turn a no-delivery iteration into an inflated
+    debt-density ratio.
     """
+    for name, value in (
+        ("TD_new", td_new),
+        ("EV_raw", ev_raw),
+        ("beta", beta),
+        ("epsilon", epsilon),
+    ):
+        _require_finite(name, value)
+    if td_new < 0:
+        raise ValueError("TD_new must be >= 0 (Eq. 2).")
+    if ev_raw <= 0:
+        raise ValueError(
+            "EV_raw must be > 0 for debt density; handle zero-delivery "
+            "iterations separately (Eq. 2)."
+        )
+    if beta <= 0:
+        raise ValueError("beta must be > 0 (Eq. 2).")
     if epsilon <= 0:
         raise ValueError("epsilon must be > 0 (Eq. 2).")
     denom = beta * ev_raw + epsilon
-    if denom <= 0:
-        raise ValueError(
-            "Non-positive denominator in debt density; handle EV_raw = 0 "
-            "iterations separately (Eq. 2)."
-        )
     return td_new / denom
 
 
@@ -81,6 +115,10 @@ def quality_factor(rho: float, lam: float) -> float:
 
         QF_t = exp(-lambda * rho_t),   lambda > 0
     """
+    _require_finite("rho", rho)
+    _require_finite("lambda", lam)
+    if rho < 0:
+        raise ValueError("rho must be >= 0 (Eq. 3).")
     if lam <= 0:
         raise ValueError("lambda must be > 0 (Eq. 3).")
     return math.exp(-lam * rho)
@@ -115,6 +153,8 @@ def delta_qspi(qspi_candidate: float, qspi_baseline: float) -> float:
     Both arguments are projected Q-SPI values at the end of the horizon:
     one for the candidate scenario, one for the baseline scenario.
     """
+    _require_finite("candidate Q-SPI", qspi_candidate)
+    _require_finite("baseline Q-SPI", qspi_baseline)
     return qspi_candidate - qspi_baseline
 
 
@@ -130,11 +170,13 @@ def impact_score(indicators: Sequence[float], weights: Sequence[float]) -> float
                  impact, availability impact).
     weights    : non-negative weights w_j that must sum to 1.
     """
-    if len(indicators) != len(weights):
-        raise ValueError("indicators and weights must have equal length (Eq. 7).")
-    if any(w < 0 for w in weights):
-        raise ValueError("weights must be non-negative (Eq. 7).")
-    if not math.isclose(sum(weights), 1.0, abs_tol=1e-9):
+    if len(indicators) != 5 or len(weights) != 5:
+        raise ValueError("Equation (7) requires exactly five indicators and weights.")
+    for index, indicator in enumerate(indicators, start=1):
+        _require_unit_interval(f"I_{index}", indicator)
+    for index, weight in enumerate(weights, start=1):
+        _require_unit_interval(f"w_{index}", weight)
+    if not math.isclose(sum(weights), 1.0, rel_tol=0.0, abs_tol=1e-9):
         raise ValueError("weights must sum to 1 (Eq. 7).")
     return sum(w * i for w, i in zip(weights, indicators))
 
@@ -161,10 +203,27 @@ def utility_score(
     The score is a triage aid only; per the paper it confers no authority
     to merge a change.
     """
+    for name, value in (
+        ("Delta_QSPI", delta_q),
+        ("C_impact", c_impact),
+        ("F_exp", f_exp),
+        ("R_conf", r_conf),
+        ("E_ref", e_ref),
+        ("R_chg", r_chg),
+    ):
+        _require_unit_interval(name, value)
+    for name, value in (
+        ("omega_E", omega_e),
+        ("omega_R", omega_r),
+        ("epsilon", epsilon),
+    ):
+        _require_finite(name, value)
     if omega_e < 0 or omega_r < 0:
         raise ValueError("omega_E and omega_R must be non-negative (Eq. 5).")
-    if not math.isclose(omega_e + omega_r, 1.0, abs_tol=1e-9):
+    if not math.isclose(omega_e + omega_r, 1.0, rel_tol=0.0, abs_tol=1e-9):
         raise ValueError("omega_E + omega_R must equal 1 (Eq. 5).")
+    if epsilon <= 0:
+        raise ValueError("epsilon must be > 0 (Eq. 5).")
     denom = omega_e * e_ref + omega_r * r_chg + epsilon
     return (delta_q * c_impact / denom) * f_exp * r_conf
 
@@ -187,6 +246,16 @@ def net_benefit(
     populated with invented rates. It is provided here so that an adopting
     organization can plug in its own audited estimates.
     """
+    for name, value in (
+        ("B_maint", b_maint),
+        ("B_speed", b_speed),
+        ("B_risk", b_risk),
+        ("C_llm", c_llm),
+        ("C_review", c_review),
+        ("C_test", c_test),
+        ("C_rollback", c_rollback),
+    ):
+        _require_finite(name, value)
     return (
         b_maint
         + b_speed

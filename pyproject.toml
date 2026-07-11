@@ -18,6 +18,7 @@ dev = ["pytest>=7.0"]
 
 [project.urls]
 Homepage = "https://bioarc.ir"
+Repository = "https://github.com/tanhaei/qspi-refactoring"
 
 [tool.setuptools]
 packages = ["qspi"]
